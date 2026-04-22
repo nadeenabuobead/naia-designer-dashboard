@@ -20,12 +20,12 @@ export async function GET() {
             }
           }
         },
-        postOutfitReviews: true,
+       review: true,
       }
     });
 
     // Flatten to get all reviews
-    const reviews = sessions.flatMap(s => s.postOutfitReviews || []);
+    const reviews = sessions.flatMap(s => s.review ? [s.review] : []);
     
     const totalReviews = reviews.length;
     const totalUsers = await prisma.customer.count();
@@ -37,7 +37,7 @@ export async function GET() {
     const piecePerformance = {};
     
     sessions.forEach(session => {
-      const review = session.postOutfitReviews?.[0]; // Get the review for this session
+      const review = session.review; // Get the review for this session
       
       session.suggestions?.forEach(sug => {
         sug.items.forEach(item => {
