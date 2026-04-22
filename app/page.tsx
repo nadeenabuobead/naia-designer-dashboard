@@ -67,9 +67,9 @@ export default function DesignerDashboard() {
           <div className="grid grid-cols-2 gap-3">
             {data.topWorked?.map((item: any) => (
               <div key={item.tag} className="bg-stone-100 p-3 rounded">
-                <div className="flex justify-between">
+                <div className="flex justify-between items-baseline">
                   <span className="text-sm font-medium text-stone-900">{item.tag}</span>
-                  <span className="text-xs text-stone-500">from {item.count} look{item.count !== 1 ? 's' : ''}</span>
+                  <span className="text-xs text-stone-400">{item.count} look{item.count !== 1 ? 's' : ''}</span>
                 </div>
               </div>
             ))}
@@ -82,9 +82,9 @@ export default function DesignerDashboard() {
           <div className="grid grid-cols-2 gap-3">
             {data.topDidntWork?.map((item: any) => (
               <div key={item.tag} className="bg-stone-100 p-3 rounded">
-                <div className="flex justify-between">
+                <div className="flex justify-between items-baseline">
                   <span className="text-sm font-medium text-stone-900">{item.tag}</span>
-                  <span className="text-xs text-stone-500">from {item.count} look{item.count !== 1 ? 's' : ''}</span>
+                  <span className="text-xs text-stone-400">{item.count} look{item.count !== 1 ? 's' : ''}</span>
                 </div>
               </div>
             ))}
@@ -94,19 +94,14 @@ export default function DesignerDashboard() {
         {/* Emotional Shifts */}
         <div className="mb-12">
           <h2 className="text-xs uppercase tracking-widest text-stone-500 mb-4">Best Emotional Shifts</h2>
-          <div className="flex flex-wrap gap-3">
-            {data.topShifts?.map((shift: any) => (
-              <div 
-                key={shift.name} 
-                className={`px-5 py-3 rounded text-sm italic ${
-                  shift.count === 1 ? 'bg-stone-300 text-stone-600' : 'bg-stone-900 text-stone-50'
-                }`}
-              >
-                {shift.name} 
-                <span className="text-xs opacity-70">
-                  ({shift.avg}/5 • from {shift.count} look{shift.count !== 1 ? 's' : ''})
-                  {shift.count === 1 && ' • low sample'}
-                </span>
+          <div className="grid grid-cols-3 gap-4">
+            {data.topShifts?.slice(0, 6).map((shift: any) => (
+              <div key={shift.name} className="bg-white p-4 rounded border border-stone-200">
+                <div className="text-sm font-medium text-stone-900 mb-1 italic">{shift.name}</div>
+                <div className="text-xs text-stone-400">
+                  Avg {shift.avg} · {shift.count} look{shift.count !== 1 ? 's' : ''}
+                  {shift.count === 1 && <span className="ml-2 text-[10px] bg-stone-100 px-1.5 py-0.5 rounded">Low sample</span>}
+                </div>
               </div>
             ))}
           </div>
@@ -115,20 +110,22 @@ export default function DesignerDashboard() {
         {/* Best Occasions */}
         <div className="mb-12">
           <h2 className="text-xs uppercase tracking-widest text-stone-500 mb-4">Best Occasions</h2>
-          <div className="flex flex-wrap gap-3">
-            {data.topOccasions?.map((occasion: any, idx: number) => (
+          <div className="grid grid-cols-4 gap-3">
+            {data.topOccasions?.slice(0, 8).map((occasion: any, idx: number) => (
               <div 
                 key={occasion.name} 
-                className={`px-5 py-3 rounded text-sm ${
-                  occasion.count === 1 ? 'bg-stone-200 text-stone-500' :
-                  idx === 0 ? 'bg-stone-900 text-stone-50' : 'bg-stone-200 text-stone-900'
+                className={`p-4 rounded border ${
+                  occasion.count === 1 ? 'border-stone-200 bg-stone-50' : 
+                  idx === 0 ? 'border-stone-900 bg-stone-900' : 'border-stone-300 bg-white'
                 }`}
               >
-                {occasion.name} 
-                <span className="text-xs opacity-70">
-                  ({occasion.avg}/5 • from {occasion.count} look{occasion.count !== 1 ? 's' : ''})
-                  {occasion.count === 1 && ' • emerging'}
-                </span>
+                <div className={`text-sm font-medium mb-1 ${idx === 0 && occasion.count > 1 ? 'text-stone-50' : 'text-stone-900'}`}>
+                  {occasion.name}
+                </div>
+                <div className={`text-xs ${idx === 0 && occasion.count > 1 ? 'text-stone-300' : 'text-stone-400'}`}>
+                  Avg {occasion.avg} · {occasion.count} look{occasion.count !== 1 ? 's' : ''}
+                  {occasion.count === 1 && <span className="ml-2 text-[10px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded">Low sample</span>}
+                </div>
               </div>
             ))}
           </div>
@@ -140,7 +137,7 @@ export default function DesignerDashboard() {
             <h2 className="text-xs uppercase tracking-widest text-stone-500 mb-4">What Stood Out To Users</h2>
             <div className="space-y-3">
               {data.quotes.map((quote: string, i: number) => (
-                <div key={i} className="pl-4 border-l border-stone-300 py-2">
+                <div key={i} className="pl-4 border-l-2 border-stone-300 py-2">
                   <p className="text-stone-700 italic">"{quote}"</p>
                 </div>
               ))}
