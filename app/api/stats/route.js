@@ -13,6 +13,7 @@ export async function GET() {
             currentMood: true,
             desiredFeeling: true,
             occasion: true,
+            bodyPreference: true,
           },
         },
       },
@@ -54,19 +55,28 @@ export async function GET() {
       .map(([tag, count]) => ({ tag, count }));
 
     const topDidntWork = Object.entries(didntWorkTags)
-  .filter(([tag]) => tag !== "Everything worked") // Filter out this tag
-  .sort((a, b) => b[1] - a[1])
-  .slice(0, 10)
-  .map(([tag, count]) => ({ tag, count }));
+      .filter(([tag]) => tag !== "Everything worked")
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([tag, count]) => ({ tag, count }));
 
-    // Emotional shifts
+    // Emotional shifts with style context
     const shifts = {};
     reviews.forEach(r => {
       if (r.session?.currentMood && r.session?.desiredFeeling) {
         const shift = `${r.session.currentMood} → ${r.session.desiredFeeling}`;
-        if (!shifts[shift]) shifts[shift] = { total: 0, count: 0 };
+        if (!shifts[shift]) shifts[shift] = { total: 0, count: 0, tags: {} };
         shifts[shift].total += r.overallFeeling || 0;
         shifts[shift].count += 1;
+        
+        // Associate worked tags with this shift
+        if (r.workedTags) {
+          try {
+            JSON.parse(r.workedTags).forEach(tag => {
+              shifts[shift].tags[tag] = (shifts[shift].tags[tag] || 0) + 1;
+            });
+          } catch {}
+        }
       }
     });
 
@@ -75,16 +85,20 @@ export async function GET() {
     const mergedShifts = {};
     Object.entries(shifts).forEach(([name, data]) => {
       const key = shiftKey(name);
-      if (!mergedShifts[key]) mergedShifts[key] = { total: 0, count: 0, originalName: name };
+      if (!mergedShifts[key]) mergedShifts[key] = { total: 0, count: 0, originalName: name, tags: {} };
       mergedShifts[key].total += data.total;
       mergedShifts[key].count += data.count;
+      Object.entries(data.tags).forEach(([tag, count]) => {
+        mergedShifts[key].tags[tag] = (mergedShifts[key].tags[tag] || 0) + count;
+      });
     });
 
     const topShifts = Object.entries(mergedShifts)
       .map(([key, data]) => ({ 
         name: data.originalName.replace('exicted', 'excited'),
         avg: Math.round((data.total / data.count) * 10) / 10,
-        count: data.count 
+        count: data.count,
+        topTags: Object.entries(data.tags).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([tag]) => tag)
       }))
       .sort((a, b) => b.avg - a.avg)
       .slice(0, 10);
@@ -108,6 +122,19 @@ export async function GET() {
       .sort((a, b) => b.avg - a.avg)
       .slice(0, 10);
 
+    // Body preferences
+    const bodyPrefs = {};
+    reviews.forEach(r => {
+      if (r.session?.bodyPreference) {
+        bodyPrefs[r.session.bodyPreference] = (bodyPrefs[r.session.bodyPreference] || 0) + 1;
+      }
+    });
+
+    const topBodyPrefs = Object.entries(bodyPrefs)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([pref, count]) => ({ pref, count }));
+
     // User quotes
     const quotes = reviews
       .filter(r => r.additionalNotes)
@@ -124,6 +151,7 @@ export async function GET() {
       topDidntWork,
       topShifts,
       topOccasions,
+      topBodyPrefs,
       quotes,
     });
   } catch (error) {
