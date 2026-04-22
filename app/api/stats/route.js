@@ -70,9 +70,19 @@ export async function GET() {
       }
     });
 
-    const topShifts = Object.entries(shifts)
-      .map(([name, data]) => ({ 
-        name, 
+    // Merge duplicate shifts (fix typos)
+    const shiftKey = (name) => name.toLowerCase().replace('exicted', 'excited');
+    const mergedShifts = {};
+    Object.entries(shifts).forEach(([name, data]) => {
+      const key = shiftKey(name);
+      if (!mergedShifts[key]) mergedShifts[key] = { total: 0, count: 0, originalName: name };
+      mergedShifts[key].total += data.total;
+      mergedShifts[key].count += data.count;
+    });
+
+    const topShifts = Object.entries(mergedShifts)
+      .map(([key, data]) => ({ 
+        name: data.originalName.replace('exicted', 'excited'),
         avg: Math.round((data.total / data.count) * 10) / 10,
         count: data.count 
       }))
