@@ -122,7 +122,7 @@ export async function GET() {
     });
 
     // Calculate piece stats
-    const pieces = Object.values(piecePerformance).map((piece: any) => {
+   const pieces = Object.values(piecePerformance).map((piece) => {
       const avgRating = piece.ratings.length > 0 
         ? piece.ratings.reduce((sum: number, r: number) => sum + r, 0) / piece.ratings.length 
         : 0;
