@@ -22,10 +22,10 @@ export default function DesignerDashboard() {
     );
   }
 
-  if (!data || data.error) {
+  if (!data || (data as any).error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-stone-50">
-        <p className="text-red-600">Failed to load dashboard: {data?.error}</p>
+        <p className="text-red-600">Failed to load dashboard: {(data as any)?.error}</p>
       </div>
     );
   }
