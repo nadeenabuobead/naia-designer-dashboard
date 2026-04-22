@@ -1,5 +1,13 @@
 'use client';
 
+interface TagBarProps {
+  tag: string;
+  count: number;
+  total: number;
+  color: string;
+}
+
+
 import { useEffect, useState } from 'react';
 
 export default function DesignerDashboard() {
@@ -128,7 +136,7 @@ function Section({ title, subtitle, children }) {
   );
 }
 
-function TagBar({ tag, count, total, color }) {
+function TagBar({ tag, count, total, color }: TagBarProps) {
   const percentage = Math.round((count / total) * 100);
   
   return (
