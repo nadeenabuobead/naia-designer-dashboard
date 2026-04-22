@@ -54,9 +54,10 @@ export async function GET() {
       .map(([tag, count]) => ({ tag, count }));
 
     const topDidntWork = Object.entries(didntWorkTags)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([tag, count]) => ({ tag, count }));
+  .filter(([tag]) => tag !== "Everything worked") // Filter out this tag
+  .sort((a, b) => b[1] - a[1])
+  .slice(0, 10)
+  .map(([tag, count]) => ({ tag, count }));
 
     // Emotional shifts
     const shifts = {};

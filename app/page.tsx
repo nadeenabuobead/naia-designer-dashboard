@@ -68,7 +68,7 @@ export default function DesignerDashboard() {
           <div className="flex flex-wrap gap-3">
             {data.topShifts.map(({ name, avg, count }) => (
               <div key={name} className="px-5 py-3 bg-stone-900 text-stone-50 rounded text-sm italic">
-                {name} <span className="text-xs opacity-70">({avg}/5 • {count}x)</span>
+                {name} <span className="text-xs text-stone-500 font-semibold">{count}x ({percentage}%)</span>
               </div>
             ))}
           </div>
