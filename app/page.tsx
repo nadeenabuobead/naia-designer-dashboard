@@ -1,17 +1,9 @@
 'use client';
 
-interface TagBarProps {
-  tag: string;
-  count: number;
-  total: number;
-  color: string;
-}
-
-
 import { useEffect, useState } from 'react';
 
 export default function DesignerDashboard() {
-  const [data, setData] = useState(null);
+  const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,10 +22,10 @@ export default function DesignerDashboard() {
     );
   }
 
-  if (!data || (data as any).error) {
+  if (!data) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-stone-50">
-        <p className="text-red-600">Failed to load dashboard: {(data as any)?.error}</p>
+        <p className="text-red-600">Failed to load dashboard</p>
       </div>
     );
   }
@@ -46,107 +38,100 @@ export default function DesignerDashboard() {
 
         {/* Top Metrics */}
         <div className="grid grid-cols-5 gap-4 mb-12">
-          <MetricCard number={data.totalUsers} label="Total Users" />
-          <MetricCard number={data.totalReviews} label="Total Ratings" />
-          <MetricCard number={`${data.avgFeeling}/5`} label="Avg Rating" />
-          <MetricCard number={`${data.feltLikeMePercent}%`} label="Style Alignment" />
-          <MetricCard number={`${data.wouldWearPercent}%`} label="Would Wear Again" />
+          <div className="bg-stone-200 p-6 rounded text-center">
+            <p className="text-3xl italic mb-2">{data.totalUsers}</p>
+            <p className="text-xs uppercase tracking-wider text-stone-600">Total Users</p>
+          </div>
+          <div className="bg-stone-200 p-6 rounded text-center">
+            <p className="text-3xl italic mb-2">{data.totalReviews}</p>
+            <p className="text-xs uppercase tracking-wider text-stone-600">Total Ratings</p>
+          </div>
+          <div className="bg-stone-200 p-6 rounded text-center">
+            <p className="text-3xl italic mb-2">{data.avgFeeling}/5</p>
+            <p className="text-xs uppercase tracking-wider text-stone-600">Avg Rating</p>
+          </div>
+          <div className="bg-stone-200 p-6 rounded text-center">
+            <p className="text-3xl italic mb-2">{data.feltLikeMePercent}%</p>
+            <p className="text-xs uppercase tracking-wider text-stone-600">Style Alignment</p>
+          </div>
+          <div className="bg-stone-200 p-6 rounded text-center">
+            <p className="text-3xl italic mb-2">{data.wouldWearPercent}%</p>
+            <p className="text-xs uppercase tracking-wider text-stone-600">Would Wear Again</p>
+          </div>
         </div>
 
         {/* What Works */}
-        <Section title="What Consistently Works" subtitle="Most selected positive feedback tags">
+        <div className="mb-12">
+          <h2 className="text-xs uppercase tracking-widest text-stone-500 mb-4">What Consistently Works</h2>
           <div className="grid grid-cols-2 gap-3">
-            {data.topWorked.map(({ tag, count }) => (
-              <TagBar key={tag} tag={tag} count={count} total={data.totalReviews} color="bg-green-600" />
+            {data.topWorked?.map((item: any) => (
+              <div key={item.tag} className="bg-stone-100 p-3 rounded">
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium">{item.tag}</span>
+                  <span className="text-xs text-stone-500">{item.count}x</span>
+                </div>
+              </div>
             ))}
           </div>
-        </Section>
+        </div>
 
         {/* What Doesn't Work */}
-        <Section title="What Doesn't Work" subtitle="Most selected negative feedback tags">
+        <div className="mb-12">
+          <h2 className="text-xs uppercase tracking-widest text-stone-500 mb-4">What Doesn't Work</h2>
           <div className="grid grid-cols-2 gap-3">
-            {data.topDidntWork.map(({ tag, count }) => (
-              <TagBar key={tag} tag={tag} count={count} total={data.totalReviews} color="bg-red-600" />
+            {data.topDidntWork?.map((item: any) => (
+              <div key={item.tag} className="bg-stone-100 p-3 rounded">
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium">{item.tag}</span>
+                  <span className="text-xs text-stone-500">{item.count}x</span>
+                </div>
+              </div>
             ))}
           </div>
-        </Section>
+        </div>
 
         {/* Emotional Shifts */}
-        <Section title="Best Emotional Shifts" subtitle="Transformations with highest ratings">
+        <div className="mb-12">
+          <h2 className="text-xs uppercase tracking-widest text-stone-500 mb-4">Best Emotional Shifts</h2>
           <div className="flex flex-wrap gap-3">
-            {data.topShifts.map(({ name, avg, count }) => (
-              <div key={name} className="px-5 py-3 bg-stone-900 text-stone-50 rounded text-sm italic">
-                {name} <span className="text-xs text-stone-500 font-semibold">{count}x ({percentage}%)</span>
+            {data.topShifts?.map((shift: any) => (
+              <div key={shift.name} className="px-5 py-3 bg-stone-900 text-stone-50 rounded text-sm italic">
+                {shift.name} <span className="text-xs opacity-70">({shift.avg}/5 • {shift.count}x)</span>
               </div>
             ))}
           </div>
-        </Section>
+        </div>
 
         {/* Best Occasions */}
-        <Section title="Best Occasions" subtitle="Events with highest success rates">
+        <div className="mb-12">
+          <h2 className="text-xs uppercase tracking-widest text-stone-500 mb-4">Best Occasions</h2>
           <div className="flex flex-wrap gap-3">
-            {data.topOccasions.map(({ name, avg, count }, idx) => (
+            {data.topOccasions?.map((occasion: any, idx: number) => (
               <div 
-                key={name} 
+                key={occasion.name} 
                 className={`px-5 py-3 rounded text-sm ${
-                  idx === 0 ? 'bg-stone-900 text-stone-50 font-medium' : 'bg-stone-200 text-stone-900'
+                  idx === 0 ? 'bg-stone-900 text-stone-50' : 'bg-stone-200 text-stone-900'
                 }`}
               >
-                {name} <span className="text-xs opacity-70">({avg}/5 • {count}x)</span>
+                {occasion.name} <span className="text-xs opacity-70">({occasion.avg}/5 • {occasion.count}x)</span>
               </div>
             ))}
           </div>
-        </Section>
+        </div>
 
         {/* User Quotes */}
-        {data.quotes.length > 0 && (
-          <Section title="What Stood Out To Users" subtitle="In their own words">
+        {data.quotes?.length > 0 && (
+          <div>
+            <h2 className="text-xs uppercase tracking-widest text-stone-500 mb-4">What Stood Out To Users</h2>
             <div className="space-y-3">
-              {data.quotes.map((quote, i) => (
+              {data.quotes.map((quote: string, i: number) => (
                 <div key={i} className="pl-4 border-l border-stone-300 py-2">
                   <p className="text-stone-700 italic">"{quote}"</p>
                 </div>
               ))}
             </div>
-          </Section>
+          </div>
         )}
-      </div>
-    </div>
-  );
-}
-
-function MetricCard({ number, label }) {
-  return (
-    <div className="bg-stone-200 p-6 rounded text-center">
-      <p className="text-3xl italic mb-2 text-stone-900">{number}</p>
-      <p className="text-xs uppercase tracking-wider text-stone-600">{label}</p>
-    </div>
-  );
-}
-
-function Section({ title, subtitle, children }) {
-  return (
-    <div className="mb-12">
-      <div className="mb-4">
-        <h2 className="text-xs uppercase tracking-widest text-stone-500 mb-1">{title}</h2>
-        <p className="text-sm text-stone-500 italic">{subtitle}</p>
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function TagBar({ tag, count, total, color }: TagBarProps) {
-  const percentage = Math.round((count / total) * 100);
-  
-  return (
-    <div className="bg-stone-100 p-3 rounded">
-      <div className="flex justify-between mb-2">
-        <span className="text-sm font-medium text-stone-900">{tag}</span>
-        <span className="text-xs text-stone-500">{count} ({percentage}%)</span>
-      </div>
-      <div className="h-1.5 bg-stone-200 rounded-full overflow-hidden">
-        <div className={`h-full ${color} transition-all`} style={{ width: `${percentage}%` }} />
       </div>
     </div>
   );
