@@ -4,43 +4,29 @@ const prisma = new PrismaClient();
 
 export async function GET() {
   try {
-    const suggestions = await prisma.outfitSuggestion.findMany({
+    // Get styling sessions with their suggestions AND reviews
+    const sessions = await prisma.stylingSession.findMany({
       take: 100,
       orderBy: { createdAt: 'desc' },
       include: {
-        items: {
-          select: {
-            productTitle: true,
-            shopifyProductId: true,
-            itemType: true,
+        suggestions: {
+          include: {
+            items: {
+              select: {
+                productTitle: true,
+                shopifyProductId: true,
+                itemType: true,
+              }
+            }
           }
         },
-        session: {
-          select: {
-            currentMood: true,
-            desiredFeeling: true,
-            occasion: true,
-            bodyPreference: true,
-          }
-        }
+        postOutfitReviews: true,
       }
     });
 
-    const reviews = await prisma.postOutfitReview.findMany({
-      take: 100,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        session: {
-          select: {
-            currentMood: true,
-            desiredFeeling: true,
-            occasion: true,
-            bodyPreference: true,
-          },
-        },
-      },
-    });
-
+    // Flatten to get all reviews
+    const reviews = sessions.flatMap(s => s.postOutfitReviews || []);
+    
     const totalReviews = reviews.length;
     const totalUsers = await prisma.customer.count();
 
@@ -48,69 +34,66 @@ export async function GET() {
     const feltLikeMe = reviews.filter(r => r.feltLikeHer === "Yes").length;
     const wouldWear = reviews.filter(r => r.wouldWearAgain === "Definitely").length;
 
-    const reviewMap = {};
-    reviews.forEach(r => {
-      reviewMap[r.sessionId] = r;
-    });
-
     const piecePerformance = {};
     
-    suggestions.forEach(sug => {
-      const review = reviewMap[sug.sessionId];
+    sessions.forEach(session => {
+      const review = session.postOutfitReviews?.[0]; // Get the review for this session
       
-      sug.items.forEach(item => {
-        if (!item.productTitle) return;
-        
-        const pieceName = item.productTitle;
-        
-        if (!piecePerformance[pieceName]) {
-          piecePerformance[pieceName] = {
-            name: pieceName,
-            category: item.itemType,
-            timesRecommended: 0,
-            ratings: [],
-            feltLikeMe: 0,
-            wouldWear: 0,
-            workedTags: {},
-            didntWorkTags: {},
-            moods: {},
-            feelings: {},
-            occasions: {},
-            bodyPrefs: {},
-            quotes: []
-          };
-        }
-        
-        const piece = piecePerformance[pieceName];
-        piece.timesRecommended += 1;
-        
-        if (review) {
-          if (review.overallFeeling) piece.ratings.push(review.overallFeeling);
-          if (review.feltLikeHer === "Yes") piece.feltLikeMe += 1;
-          if (review.wouldWearAgain === "Definitely") piece.wouldWear += 1;
+      session.suggestions?.forEach(sug => {
+        sug.items.forEach(item => {
+          if (!item.productTitle) return;
           
-          if (review.workedTags) {
-            try {
-              JSON.parse(review.workedTags).forEach(tag => {
-                piece.workedTags[tag] = (piece.workedTags[tag] || 0) + 1;
-              });
-            } catch {}
-          }
-          if (review.didntWorkTags) {
-            try {
-              JSON.parse(review.didntWorkTags).forEach(tag => {
-                piece.didntWorkTags[tag] = (piece.didntWorkTags[tag] || 0) + 1;
-              });
-            } catch {}
+          const pieceName = item.productTitle;
+          
+          if (!piecePerformance[pieceName]) {
+            piecePerformance[pieceName] = {
+              name: pieceName,
+              category: item.itemType,
+              timesRecommended: 0,
+              ratings: [],
+              feltLikeMe: 0,
+              wouldWear: 0,
+              workedTags: {},
+              didntWorkTags: {},
+              moods: {},
+              feelings: {},
+              occasions: {},
+              bodyPrefs: {},
+              quotes: []
+            };
           }
           
-          if (sug.session?.currentMood) piece.moods[sug.session.currentMood] = (piece.moods[sug.session.currentMood] || 0) + 1;
-          if (sug.session?.desiredFeeling) piece.feelings[sug.session.desiredFeeling] = (piece.feelings[sug.session.desiredFeeling] || 0) + 1;
-          if (sug.session?.occasion) piece.occasions[sug.session.occasion] = (piece.occasions[sug.session.occasion] || 0) + 1;
-          if (sug.session?.bodyPreference) piece.bodyPrefs[sug.session.bodyPreference] = (piece.bodyPrefs[sug.session.bodyPreference] || 0) + 1;
+          const piece = piecePerformance[pieceName];
+          piece.timesRecommended += 1;
           
-          if (review.additionalNotes) piece.quotes.push(review.additionalNotes);
-        }
+          if (review) {
+            if (review.overallFeeling) piece.ratings.push(review.overallFeeling);
+            if (review.feltLikeHer === "Yes") piece.feltLikeMe += 1;
+            if (review.wouldWearAgain === "Definitely") piece.wouldWear += 1;
+            
+            if (review.workedTags) {
+              try {
+                JSON.parse(review.workedTags).forEach(tag => {
+                  piece.workedTags[tag] = (piece.workedTags[tag] || 0) + 1;
+                });
+              } catch {}
+            }
+            if (review.didntWorkTags) {
+              try {
+                JSON.parse(review.didntWorkTags).forEach(tag => {
+                  piece.didntWorkTags[tag] = (piece.didntWorkTags[tag] || 0) + 1;
+                });
+              } catch {}
+            }
+            
+            if (session.currentMood) piece.moods[session.currentMood] = (piece.moods[session.currentMood] || 0) + 1;
+            if (session.desiredFeeling) piece.feelings[session.desiredFeeling] = (piece.feelings[session.desiredFeeling] || 0) + 1;
+            if (session.occasion) piece.occasions[session.occasion] = (piece.occasions[session.occasion] || 0) + 1;
+            if (session.bodyPreference) piece.bodyPrefs[session.bodyPreference] = (piece.bodyPrefs[session.bodyPreference] || 0) + 1;
+            
+            if (review.additionalNotes) piece.quotes.push(review.additionalNotes);
+          }
+        });
       });
     });
 
@@ -195,11 +178,14 @@ export async function GET() {
           });
         } catch {}
       }
-      if (r.session?.bodyPreference) {
-        allBodyPrefs[r.session.bodyPreference] = (allBodyPrefs[r.session.bodyPreference] || 0) + 1;
+    });
+    
+    sessions.forEach(s => {
+      if (s.bodyPreference) {
+        allBodyPrefs[s.bodyPreference] = (allBodyPrefs[s.bodyPreference] || 0) + 1;
       }
-      if (r.session?.occasion) {
-        allOccasions[r.session.occasion] = (allOccasions[r.session.occasion] || 0) + 1;
+      if (s.occasion) {
+        allOccasions[s.occasion] = (allOccasions[s.occasion] || 0) + 1;
       }
     });
 
