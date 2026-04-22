@@ -4,6 +4,30 @@ const prisma = new PrismaClient();
 
 export async function GET() {
   try {
+    // Get all outfit suggestions with items and reviews
+    const suggestions = await prisma.outfitSuggestion.findMany({
+      take: 100,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        items: {
+          select: {
+            productTitle: true,
+            shopifyProductId: true,
+            itemType: true,
+          }
+        },
+        session: {
+          select: {
+            currentMood: true,
+            desiredFeeling: true,
+            occasion: true,
+            bodyPreference: true,
+          }
+        }
+      }
+    });
+
+    // Get all reviews
     const reviews = await prisma.postOutfitReview.findMany({
       take: 100,
       orderBy: { createdAt: 'desc' },
@@ -22,139 +46,214 @@ export async function GET() {
     const totalReviews = reviews.length;
     const totalUsers = await prisma.customer.count();
 
-    // Calculate metrics
+    // Calculate overall metrics
     const avgFeeling = reviews.reduce((sum, r) => sum + (r.overallFeeling || 0), 0) / totalReviews || 0;
     const feltLikeMe = reviews.filter(r => r.feltLikeHer === "Yes").length;
     const wouldWear = reviews.filter(r => r.wouldWearAgain === "Definitely").length;
 
-    // Aggregate tags
-    const workedTags = {};
-    const didntWorkTags = {};
+    // Map reviews to suggestions to get piece-level data
+    const reviewMap = {};
+    reviews.forEach(r => {
+      reviewMap[r.sessionId] = r;
+    });
+
+    // Aggregate piece performance
+    const piecePerformance = {};
+    
+    suggestions.forEach(sug => {
+      const review = reviewMap[sug.sessionId];
+      
+      sug.items.forEach(item => {
+        if (!item.productTitle) return; // Skip if not a nAia product
+        
+        const pieceName = item.productTitle;
+        
+        if (!piecePerformance[pieceName]) {
+          piecePerformance[pieceName] = {
+            name: pieceName,
+            category: item.itemType,
+            timesRecommended: 0,
+            ratings: [],
+            feltLikeMe: 0,
+            wouldWear: 0,
+            workedTags: {},
+            didntWorkTags: {},
+            moods: {},
+            feelings: {},
+            occasions: {},
+            bodyPrefs: {},
+            quotes: []
+          };
+        }
+        
+        const piece = piecePerformance[pieceName];
+        piece.timesRecommended += 1;
+        
+        if (review) {
+          if (review.overallFeeling) piece.ratings.push(review.overallFeeling);
+          if (review.feltLikeHer === "Yes") piece.feltLikeMe += 1;
+          if (review.wouldWearAgain === "Definitely") piece.wouldWear += 1;
+          
+          // Tags
+          if (review.workedTags) {
+            try {
+              JSON.parse(review.workedTags).forEach(tag => {
+                piece.workedTags[tag] = (piece.workedTags[tag] || 0) + 1;
+              });
+            } catch {}
+          }
+          if (review.didntWorkTags) {
+            try {
+              JSON.parse(review.didntWorkTags).forEach(tag => {
+                piece.didntWorkTags[tag] = (piece.didntWorkTags[tag] || 0) + 1;
+              });
+            } catch {}
+          }
+          
+          // Context
+          if (sug.session?.currentMood) piece.moods[sug.session.currentMood] = (piece.moods[sug.session.currentMood] || 0) + 1;
+          if (sug.session?.desiredFeeling) piece.feelings[sug.session.desiredFeeling] = (piece.feelings[sug.session.desiredFeeling] || 0) + 1;
+          if (sug.session?.occasion) piece.occasions[sug.session.occasion] = (piece.occasions[sug.session.occasion] || 0) + 1;
+          if (sug.session?.bodyPreference) piece.bodyPrefs[sug.session.bodyPreference] = (piece.bodyPrefs[sug.session.bodyPreference] || 0) + 1;
+          
+          if (review.additionalNotes) piece.quotes.push(review.additionalNotes);
+        }
+      });
+    });
+
+    // Calculate piece stats
+    const pieces = Object.values(piecePerformance).map((piece: any) => {
+      const avgRating = piece.ratings.length > 0 
+        ? piece.ratings.reduce((sum: number, r: number) => sum + r, 0) / piece.ratings.length 
+        : 0;
+      
+      const wouldWearPercent = piece.ratings.length > 0
+        ? Math.round((piece.wouldWear / piece.ratings.length) * 100)
+        : 0;
+        
+      const topWorked = Object.entries(piece.workedTags)
+        .sort((a: any, b: any) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([tag]) => tag);
+        
+      const topDidntWork = Object.entries(piece.didntWorkTags)
+        .filter(([tag]) => tag !== "Everything worked")
+        .sort((a: any, b: any) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([tag]) => tag);
+        
+      const topFeelings = Object.entries(piece.feelings)
+        .sort((a: any, b: any) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([feeling]) => feeling);
+        
+      const topOccasions = Object.entries(piece.occasions)
+        .sort((a: any, b: any) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([occasion]) => occasion);
+        
+      const topBodyPrefs = Object.entries(piece.bodyPrefs)
+        .sort((a: any, b: any) => b[1] - a[1])
+        .slice(0, 2)
+        .map(([pref]) => pref);
+      
+      return {
+        name: piece.name,
+        category: piece.category,
+        timesRecommended: piece.timesRecommended,
+        timesRated: piece.ratings.length,
+        avgRating: Math.round(avgRating * 10) / 10,
+        wouldWearPercent,
+        topWorked,
+        topDidntWork,
+        topFeelings,
+        topOccasions,
+        topBodyPrefs,
+        quote: piece.quotes[0] || null
+      };
+    });
+
+    // Sort pieces by performance
+    const topPieces = pieces
+      .filter(p => p.timesRated > 0)
+      .sort((a, b) => b.avgRating - a.avgRating)
+      .slice(0, 10);
+      
+    const strugglingPieces = pieces
+      .filter(p => p.timesRated > 1)
+      .sort((a, b) => a.avgRating - b.avgRating)
+      .slice(0, 5);
+
+    // Overall aggregations (for overview sections)
+    const allWorkedTags = {};
+    const allDidntWorkTags = {};
+    const allBodyPrefs = {};
+    const allOccasions = {};
     
     reviews.forEach(r => {
       if (r.workedTags) {
         try {
           JSON.parse(r.workedTags).forEach(tag => {
-            workedTags[tag] = (workedTags[tag] || 0) + 1;
+            allWorkedTags[tag] = (allWorkedTags[tag] || 0) + 1;
           });
         } catch {}
       }
       if (r.didntWorkTags) {
         try {
           JSON.parse(r.didntWorkTags).forEach(tag => {
-            didntWorkTags[tag] = (didntWorkTags[tag] || 0) + 1;
+            allDidntWorkTags[tag] = (allDidntWorkTags[tag] || 0) + 1;
           });
         } catch {}
       }
+      if (r.session?.bodyPreference) {
+        allBodyPrefs[r.session.bodyPreference] = (allBodyPrefs[r.session.bodyPreference] || 0) + 1;
+      }
+      if (r.session?.occasion) {
+        allOccasions[r.session.occasion] = (allOccasions[r.session.occasion] || 0) + 1;
+      }
     });
 
-    // Top tags
-    const topWorked = Object.entries(workedTags)
+    const topWorkedOverall = Object.entries(allWorkedTags)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
+      .slice(0, 6)
       .map(([tag, count]) => ({ tag, count }));
-
-    const topDidntWork = Object.entries(didntWorkTags)
+      
+    const topDidntWorkOverall = Object.entries(allDidntWorkTags)
       .filter(([tag]) => tag !== "Everything worked")
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
+      .slice(0, 6)
       .map(([tag, count]) => ({ tag, count }));
-
-    // Emotional shifts with style context
-    const shifts = {};
-    reviews.forEach(r => {
-      if (r.session?.currentMood && r.session?.desiredFeeling) {
-        const shift = `${r.session.currentMood} → ${r.session.desiredFeeling}`;
-        if (!shifts[shift]) shifts[shift] = { total: 0, count: 0, tags: {} };
-        shifts[shift].total += r.overallFeeling || 0;
-        shifts[shift].count += 1;
-        
-        // Associate worked tags with this shift
-        if (r.workedTags) {
-          try {
-            JSON.parse(r.workedTags).forEach(tag => {
-              shifts[shift].tags[tag] = (shifts[shift].tags[tag] || 0) + 1;
-            });
-          } catch {}
-        }
-      }
-    });
-
-    // Merge duplicate shifts (fix typos)
-    const shiftKey = (name) => name.toLowerCase().replace('exicted', 'excited');
-    const mergedShifts = {};
-    Object.entries(shifts).forEach(([name, data]) => {
-      const key = shiftKey(name);
-      if (!mergedShifts[key]) mergedShifts[key] = { total: 0, count: 0, originalName: name, tags: {} };
-      mergedShifts[key].total += data.total;
-      mergedShifts[key].count += data.count;
-      Object.entries(data.tags).forEach(([tag, count]) => {
-        mergedShifts[key].tags[tag] = (mergedShifts[key].tags[tag] || 0) + count;
-      });
-    });
-
-    const topShifts = Object.entries(mergedShifts)
-      .map(([key, data]) => ({ 
-        name: data.originalName.replace('exicted', 'excited'),
-        avg: Math.round((data.total / data.count) * 10) / 10,
-        count: data.count,
-        topTags: Object.entries(data.tags).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([tag]) => tag)
-      }))
-      .sort((a, b) => b.avg - a.avg)
-      .slice(0, 10);
-
-    // Occasions
-    const occasions = {};
-    reviews.forEach(r => {
-      if (r.session?.occasion) {
-        if (!occasions[r.session.occasion]) occasions[r.session.occasion] = { total: 0, count: 0 };
-        occasions[r.session.occasion].total += r.overallFeeling || 0;
-        occasions[r.session.occasion].count += 1;
-      }
-    });
-
-    const topOccasions = Object.entries(occasions)
-      .map(([name, data]) => ({ 
-        name, 
-        avg: Math.round((data.total / data.count) * 10) / 10,
-        count: data.count 
-      }))
-      .sort((a, b) => b.avg - a.avg)
-      .slice(0, 10);
-
-    // Body preferences
-    const bodyPrefs = {};
-    reviews.forEach(r => {
-      if (r.session?.bodyPreference) {
-        bodyPrefs[r.session.bodyPreference] = (bodyPrefs[r.session.bodyPreference] || 0) + 1;
-      }
-    });
-
-    const topBodyPrefs = Object.entries(bodyPrefs)
+      
+    const topBodyPrefsOverall = Object.entries(allBodyPrefs)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
+      .slice(0, 6)
       .map(([pref, count]) => ({ pref, count }));
-
-    // User quotes
-    const quotes = reviews
-      .filter(r => r.additionalNotes)
-      .slice(0, 10)
-      .map(r => r.additionalNotes);
+      
+    const topOccasionsOverall = Object.entries(allOccasions)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([occasion, count]) => ({ occasion, count }));
 
     return Response.json({
+      // Overview
       totalReviews,
       totalUsers,
       avgFeeling: Math.round(avgFeeling * 10) / 10,
       feltLikeMePercent: Math.round((feltLikeMe / totalReviews) * 100) || 0,
       wouldWearPercent: Math.round((wouldWear / totalReviews) * 100) || 0,
-      topWorked,
-      topDidntWork,
-      topShifts,
-      topOccasions,
-      topBodyPrefs,
-      quotes,
+      
+      // Piece-level
+      topPieces,
+      strugglingPieces,
+      
+      // Overall patterns
+      topWorkedOverall,
+      topDidntWorkOverall,
+      topBodyPrefsOverall,
+      topOccasionsOverall,
     });
   } catch (error) {
+    console.error('API Error:', error);
     return Response.json({ error: error.message }, { status: 500 });
   }
 }

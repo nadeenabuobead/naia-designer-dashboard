@@ -34,39 +34,48 @@ export default function DesignerDashboard() {
     <div className="min-h-screen bg-stone-50 p-8">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-4xl font-light tracking-wider uppercase text-stone-900 mb-2">Designer Dashboard</h1>
-        <p className="text-stone-500 italic mb-12">Which styles are working, how they make users feel, and what to design next</p>
+        <p className="text-stone-500 italic mb-12">Which pieces are landing, for whom, and why</p>
 
         {/* Top Metrics */}
         <div className="grid grid-cols-5 gap-4 mb-16">
-          <div className="bg-stone-200 p-6 rounded text-center">
-            <p className="text-3xl italic mb-2 text-stone-900">{data.totalUsers}</p>
-            <p className="text-xs uppercase tracking-wider text-stone-600">Total Users</p>
-          </div>
-          <div className="bg-stone-200 p-6 rounded text-center">
-            <p className="text-3xl italic mb-2 text-stone-900">{data.totalReviews}</p>
-            <p className="text-xs uppercase tracking-wider text-stone-600">Looks Rated</p>
-          </div>
-          <div className="bg-stone-200 p-6 rounded text-center">
-            <p className="text-3xl italic mb-2 text-stone-900">{data.avgFeeling}/5</p>
-            <p className="text-xs uppercase tracking-wider text-stone-600">Avg Rating</p>
-          </div>
-          <div className="bg-stone-200 p-6 rounded text-center">
-            <p className="text-3xl italic mb-2 text-stone-900">{data.feltLikeMePercent}%</p>
-            <p className="text-xs uppercase tracking-wider text-stone-600">Style Alignment</p>
-          </div>
-          <div className="bg-stone-200 p-6 rounded text-center">
-            <p className="text-3xl italic mb-2 text-stone-900">{data.wouldWearPercent}%</p>
-            <p className="text-xs uppercase tracking-wider text-stone-600">Would Wear Again</p>
-          </div>
+          <MetricCard number={data.totalUsers} label="Total Users" />
+          <MetricCard number={data.totalReviews} label="Looks Rated" />
+          <MetricCard number={`${data.avgFeeling}/5`} label="Avg Rating" />
+          <MetricCard number={`${data.feltLikeMePercent}%`} label="Style Alignment" />
+          <MetricCard number={`${data.wouldWearPercent}%`} label="Would Wear Again" />
         </div>
 
-        {/* 1. What Styles Are Landing */}
-        <Section title="What Styles Are Landing" subtitle="Most successful outfit qualities across users">
-          <div className="grid grid-cols-2 gap-3">
-            {data.topWorked?.map((item: any) => (
+        {/* Top Performing Pieces */}
+        <Section title="Top-Performing Pieces" subtitle="Garments from your collection with highest ratings">
+          {data.topPieces?.length > 0 ? (
+            <div className="space-y-4">
+              {data.topPieces.map((piece: any) => (
+                <PieceCard key={piece.name} piece={piece} variant="success" />
+              ))}
+            </div>
+          ) : (
+            <p className="text-stone-500 italic">Not enough data yet</p>
+          )}
+        </Section>
+
+        {/* Struggling Pieces */}
+        {data.strugglingPieces?.length > 0 && (
+          <Section title="Pieces That Need Attention" subtitle="Garments with lower ratings or frequent rejection">
+            <div className="space-y-4">
+              {data.strugglingPieces.map((piece: any) => (
+                <PieceCard key={piece.name} piece={piece} variant="warning" />
+              ))}
+            </div>
+          </Section>
+        )}
+
+        {/* What Users Liked Most */}
+        <Section title="What Users Liked Most" subtitle="Most selected positive feedback across all looks">
+          <div className="grid grid-cols-3 gap-3">
+            {data.topWorkedOverall?.map((item: any) => (
               <div key={item.tag} className="bg-white p-4 rounded border border-stone-200">
                 <div className="flex justify-between items-baseline">
-                  <span className="text-base font-medium text-stone-900">{item.tag}</span>
+                  <span className="text-sm font-medium text-stone-900">{item.tag}</span>
                   <span className="text-xs text-stone-400">{item.count} look{item.count !== 1 ? 's' : ''}</span>
                 </div>
               </div>
@@ -74,62 +83,25 @@ export default function DesignerDashboard() {
           </div>
         </Section>
 
-        {/* 2. What These Styles Help Users Feel */}
-        <Section title="What These Styles Help Users Feel" subtitle="Emotional outcomes associated with successful looks">
-          <div className="grid grid-cols-2 gap-4">
-            {data.topShifts?.filter((s: any) => s.count > 1).slice(0, 6).map((shift: any) => (
-              <div key={shift.name} className="bg-white p-5 rounded border border-stone-200">
-                <div className="text-base font-medium text-stone-900 mb-2">{shift.name}</div>
-                <div className="text-sm text-stone-600 mb-3">
-                  Avg {shift.avg}/5 · {shift.count} look{shift.count !== 1 ? 's' : ''}
-                </div>
-                {shift.topTags?.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {shift.topTags.map((tag: string) => (
-                      <span key={tag} className="text-xs bg-stone-100 text-stone-600 px-2 py-1 rounded">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </Section>
-
-        {/* 3. What Users Liked Most */}
-        <Section title="What Users Liked Most" subtitle="Most selected positive feedback tags">
+        {/* What Didn't Work */}
+        <Section title="What Didn't Work" subtitle="Most common rejection points">
           <div className="grid grid-cols-3 gap-3">
-            {data.topWorked?.slice(0, 6).map((item: any) => (
-              <div key={item.tag} className="bg-stone-100 p-3 rounded">
+            {data.topDidntWorkOverall?.map((item: any) => (
+              <div key={item.tag} className="bg-red-50 border border-red-100 p-4 rounded">
                 <div className="flex justify-between items-baseline">
-                  <span className="text-sm text-stone-900">{item.tag}</span>
-                  <span className="text-xs text-stone-500">{item.count}</span>
+                  <span className="text-sm font-medium text-red-900">{item.tag}</span>
+                  <span className="text-xs text-red-600">{item.count} look{item.count !== 1 ? 's' : ''}</span>
                 </div>
               </div>
             ))}
           </div>
         </Section>
 
-        {/* 4. What's Not Landing */}
-        <Section title="What's Not Landing" subtitle="Most selected rejection points">
-          <div className="grid grid-cols-3 gap-3">
-            {data.topDidntWork?.slice(0, 6).map((item: any) => (
-              <div key={item.tag} className="bg-red-50 border border-red-100 p-3 rounded">
-                <div className="flex justify-between items-baseline">
-                  <span className="text-sm text-red-900">{item.tag}</span>
-                  <span className="text-xs text-red-600">{item.count}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Section>
-
-        {/* 5. Body and Fit Patterns */}
-        {data.topBodyPrefs?.length > 0 && (
-          <Section title="Body and Fit Patterns" subtitle="Recurring body preferences and comfort needs">
-            <div className="grid grid-cols-2 gap-3">
-              {data.topBodyPrefs.map((pref: any) => (
+        {/* Body Preference Patterns */}
+        {data.topBodyPrefsOverall?.length > 0 && (
+          <Section title="Body Preference Patterns" subtitle="What customers are asking for physically">
+            <div className="grid grid-cols-3 gap-3">
+              {data.topBodyPrefsOverall.map((pref: any) => (
                 <div key={pref.pref} className="bg-white p-4 rounded border border-stone-200">
                   <div className="flex justify-between items-baseline">
                     <span className="text-sm font-medium text-stone-900">{pref.pref}</span>
@@ -141,42 +113,135 @@ export default function DesignerDashboard() {
           </Section>
         )}
 
-        {/* 6. What Users Need Help Styling */}
-        <Section title="What Users Need Help Styling" subtitle="Most requested occasions and styling contexts">
+        {/* What Users Need Help Styling */}
+        <Section title="What Users Need Help Styling" subtitle="Most requested occasions">
           <div className="grid grid-cols-4 gap-3">
-            {data.topOccasions?.map((occasion: any, idx: number) => (
+            {data.topOccasionsOverall?.map((occ: any, idx: number) => (
               <div 
-                key={occasion.name} 
-                className={`p-4 rounded ${
-                  occasion.count === 1 ? 'bg-stone-100 border border-stone-200' :
-                  idx === 0 ? 'bg-stone-900 text-stone-50' : 'bg-white border border-stone-200'
-                }`}
+                key={occ.occasion} 
+                className={`p-4 rounded ${idx === 0 ? 'bg-stone-900 text-stone-50' : 'bg-white border border-stone-200'}`}
               >
-                <div className={`text-sm font-medium mb-1 capitalize ${idx === 0 && occasion.count > 1 ? 'text-stone-50' : 'text-stone-900'}`}>
-                  {occasion.name}
+                <div className={`text-sm font-medium mb-1 capitalize ${idx === 0 ? 'text-stone-50' : 'text-stone-900'}`}>
+                  {occ.occasion}
                 </div>
-                <div className={`text-xs ${idx === 0 && occasion.count > 1 ? 'text-stone-300' : 'text-stone-500'}`}>
-                  {occasion.avg}/5 · {occasion.count} look{occasion.count !== 1 ? 's' : ''}
-                  {occasion.count === 1 && <span className="ml-1 opacity-60">• emerging</span>}
+                <div className={`text-xs ${idx === 0 ? 'text-stone-300' : 'text-stone-500'}`}>
+                  {occ.count} look{occ.count !== 1 ? 's' : ''}
                 </div>
               </div>
             ))}
           </div>
         </Section>
+      </div>
+    </div>
+  );
+}
 
-        {/* 7. In Their Own Words */}
-        {data.quotes?.length > 0 && (
-          <Section title="In Their Own Words" subtitle="Qualitative feedback from users">
-            <div className="space-y-3">
-              {data.quotes.map((quote: string, i: number) => (
-                <div key={i} className="pl-4 border-l-2 border-stone-300 py-2">
-                  <p className="text-stone-700 italic">"{quote}"</p>
-                </div>
-              ))}
+function PieceCard({ piece, variant }: { piece: any; variant: 'success' | 'warning' }) {
+  const borderColor = variant === 'success' ? 'border-green-200' : 'border-orange-200';
+  const bgColor = variant === 'success' ? 'bg-green-50' : 'bg-orange-50';
+  
+  return (
+    <div className={`${bgColor} border ${borderColor} rounded-lg p-5`}>
+      {/* Header */}
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <h3 className="text-lg font-medium text-stone-900">{piece.name}</h3>
+          <p className="text-sm text-stone-500 capitalize">{piece.category}</p>
+        </div>
+        <div className="text-right">
+          <div className="text-2xl font-light text-stone-900">{piece.avgRating}/5</div>
+          <div className="text-xs text-stone-500">{piece.timesRated} rating{piece.timesRated !== 1 ? 's' : ''}</div>
+        </div>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <div className="text-xs uppercase tracking-wider text-stone-500 mb-1">Recommended</div>
+          <div className="text-sm font-medium text-stone-900">{piece.timesRecommended} time{piece.timesRecommended !== 1 ? 's' : ''}</div>
+        </div>
+        <div>
+          <div className="text-xs uppercase tracking-wider text-stone-500 mb-1">Would Wear Again</div>
+          <div className="text-sm font-medium text-stone-900">{piece.wouldWearPercent}%</div>
+        </div>
+      </div>
+
+      {/* What Worked */}
+      {piece.topWorked?.length > 0 && (
+        <div className="mb-3">
+          <div className="text-xs uppercase tracking-wider text-stone-500 mb-2">What Worked</div>
+          <div className="flex flex-wrap gap-2">
+            {piece.topWorked.map((tag: string) => (
+              <span key={tag} className="text-xs bg-white border border-stone-200 text-stone-700 px-2 py-1 rounded">
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* What Didn't Work */}
+      {piece.topDidntWork?.length > 0 && (
+        <div className="mb-3">
+          <div className="text-xs uppercase tracking-wider text-stone-500 mb-2">Watchouts</div>
+          <div className="flex flex-wrap gap-2">
+            {piece.topDidntWork.map((tag: string) => (
+              <span key={tag} className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Context Grid */}
+      <div className="grid grid-cols-3 gap-4 pt-3 border-t border-stone-200">
+        {/* Feelings Created */}
+        {piece.topFeelings?.length > 0 && (
+          <div>
+            <div className="text-xs uppercase tracking-wider text-stone-500 mb-1">Helped Users Feel</div>
+            <div className="text-xs text-stone-700">
+              {piece.topFeelings.join(', ')}
             </div>
-          </Section>
+          </div>
+        )}
+
+        {/* Best Occasions */}
+        {piece.topOccasions?.length > 0 && (
+          <div>
+            <div className="text-xs uppercase tracking-wider text-stone-500 mb-1">Best For</div>
+            <div className="text-xs text-stone-700 capitalize">
+              {piece.topOccasions.join(', ')}
+            </div>
+          </div>
+        )}
+
+        {/* Body Preferences */}
+        {piece.topBodyPrefs?.length > 0 && (
+          <div>
+            <div className="text-xs uppercase tracking-wider text-stone-500 mb-1">Body Match</div>
+            <div className="text-xs text-stone-700">
+              {piece.topBodyPrefs.join(', ')}
+            </div>
+          </div>
         )}
       </div>
+
+      {/* Quote */}
+      {piece.quote && (
+        <div className="mt-4 pt-3 border-t border-stone-200">
+          <p className="text-sm text-stone-600 italic">"{piece.quote}"</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MetricCard({ number, label }: { number: any; label: string }) {
+  return (
+    <div className="bg-stone-200 p-6 rounded text-center">
+      <p className="text-3xl italic mb-2 text-stone-900">{number}</p>
+      <p className="text-xs uppercase tracking-wider text-stone-600">{label}</p>
     </div>
   );
 }
