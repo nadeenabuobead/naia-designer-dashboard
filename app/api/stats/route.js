@@ -4,35 +4,33 @@ const prisma = new PrismaClient();
 
 export async function GET() {
   try {
-    // Get styling sessions with their suggestions AND reviews
-    const sessions = await prisma.stylingSession.findMany({
-      take: 100,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        suggestions: {
-          include: {
-            items: {
-              select: {
-                productTitle: true,
-                shopifyProductId: true,
-                itemType: true,
+    console.log('Starting API call...');
+    
+    let sessions;
+    try {
+      sessions = await prisma.stylingSession.findMany({
+        take: 100,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          suggestions: {
+            include: {
+              items: {
+                select: {
+                  productTitle: true,
+                  shopifyProductId: true,
+                  itemType: true,
+                }
               }
             }
-          }
-        },
-       review: true,
-      }
-    });
-
-    console.log('=== DEBUG START ===');
-    try {
-      console.log('Total sessions:', sessions?.length || 0);
-      console.log('Sessions type:', typeof sessions);
-      console.log('Is array?', Array.isArray(sessions));
-    } catch (e) {
-      console.log('Debug error:', e.message);
+          },
+          review: true,
+        }
+      });
+      console.log('Sessions fetched successfully:', sessions.length);
+    } catch (dbError) {
+      console.error('Database error:', dbError.message);
+      return Response.json({ error: 'Database query failed: ' + dbError.message }, { status: 500 });
     }
-    console.log('=== DEBUG END ===');
 
     // Flatten to get all reviews
     const reviews = sessions.flatMap(s => s.review ? [s.review] : []);
