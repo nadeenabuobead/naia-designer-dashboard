@@ -24,17 +24,15 @@ export async function GET() {
       }
     });
 
-    console.log('=== DEBUG ===');
-    console.log('Total sessions:', sessions.length);
-    console.log('Sessions with suggestions:', sessions.filter(s => s.suggestions?.length > 0).length);
-    if (sessions.length > 0) {
-      console.log('First session suggestions:', sessions[0].suggestions?.length || 0);
-      if (sessions[0].suggestions?.[0]?.items) {
-        console.log('First suggestion items:', sessions[0].suggestions[0].items.length);
-        console.log('Sample item:', JSON.stringify(sessions[0].suggestions[0].items[0], null, 2));
-      }
+    console.log('=== DEBUG START ===');
+    try {
+      console.log('Total sessions:', sessions?.length || 0);
+      console.log('Sessions type:', typeof sessions);
+      console.log('Is array?', Array.isArray(sessions));
+    } catch (e) {
+      console.log('Debug error:', e.message);
     }
-    console.log('=== END DEBUG ===');
+    console.log('=== DEBUG END ===');
 
     // Flatten to get all reviews
     const reviews = sessions.flatMap(s => s.review ? [s.review] : []);
