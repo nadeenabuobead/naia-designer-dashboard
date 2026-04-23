@@ -38,9 +38,6 @@ export async function GET() {
 
     // Flatten to get all reviews
     const reviews = sessions.flatMap(s => s.review ? [s.review] : []);
-
-    // Flatten to get all reviews
-    const reviews = sessions.flatMap(s => s.review ? [s.review] : []);
     
     const totalReviews = reviews.length;
     const totalUsers = await prisma.customer.count();
